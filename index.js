@@ -30,30 +30,35 @@ export default {
         }
       }
 
-      // 构建模型列表
-      const models = {
-        object: "list",
-        data: [
-          {
-            id: "deepseek-ai/DeepSeek-R1-0528-Turbo",
-            object: "model",
-            created: 1624980000,
-            owned_by: "deepseek-ai"
-          },
-          {
-            id: "deepseek-ai/DeepSeek-V3-0324-Turbo",
-            object: "model",
-            created: 1632000000,
-            owned_by: "deepseek-ai"
-          },
-          {
-            id: "deepseek-ai/DeepSeek-R1-Distill-Llama-70B",
-            object: "model",
-            created: 1640000000,
-            owned_by: "deepseek-ai"
+      // 从 DeepInfra API 获取模型列表
+      const response = await fetch("https://api.deepinfra.com/v1/openai/models", {
+        headers: {
+          "Accept": "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0"
+        }
+      });
+
+      // 检查响应是否成功
+      if (!response.ok) {
+        return new Response("Failed to fetch models from DeepInfra API", {
+          status: response.status,
+          headers: {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*"
           }
-        ]
-      };
+        });
+      }
+
+      // 获取响应体
+      const models = await response.json();
+
+      // Add the new virtual model
+      models.data.unshift({
+        id: "deepseek-ai/DeepSeek-V3.1-thinking",
+        object: "model",
+        created: Math.floor(Date.now() / 1000),
+        owned_by: "deepseek-ai"
+      });
 
       return new Response(JSON.stringify(models), {
         headers: {
@@ -90,6 +95,13 @@ export default {
     try {
       // 原始请求处理逻辑
       const body = await request.json();
+
+      // Handle the virtual model
+      if (body.model === "deepseek-ai/DeepSeek-V3.1-thinking") {
+        body.model = "deepseek-ai/DeepSeek-V3.1";
+        body.reasoning_effort = "high";
+      }
+
       const headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/133.0.0.0 Safari/537.36 Edg/133.0.0.0",
         "Accept": "text/event-stream",
